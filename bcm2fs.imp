@@ -2,3 +2,5 @@ o ./bcm2fs
 sleep 10
 o ./7pfbb
 sleep 10
+fwdimport jm1ysb /bcm/fwd/import/mail.in
+os rm -f /bcm/fwd/import/mail.in
