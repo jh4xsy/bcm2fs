@@ -5,79 +5,128 @@
 # 7PLUS auto-extracter and manager for LINUX
 #
 # F6FBB - 1996
-# Rewritten for BCM by OK2BXT 1998
 #
 ##############################################
 
 
 #
-# ALL THESE VARIABLES MUST BE INITALIZED !
+# THIS VARIABLE MUST BE INITALIZED !
+# ==================================
 #
+# 7PLUS administrator(s) for report mails
+# Replace SYSOP by the list of callsign separated by a space
+#
+SP_ADM="OK2BXT"
 
 #
-# 7PLUS administrator for report mails
+# THESE VARIABLES SHOULD BE OK
 #
-SP_ADM=OK2BXT
 
 #
 # MAIL.IN file
 #
-#MAIL_IN=/usr/local/fbbs/mail.in
-MAIL_IN=/var/log/bcm2fs.log
+MAIL_IN=/bcm/fwd/import/mail.in
 
 #
 # Name (and path) of the 7plus program
 #
-SPLUS=/usr/local/fbbs/bin/7plus
+SPLUS=/usr/bin/7plus
 
 #
 # Name of the log file
 #
-SP_LOG=/tmp/pok/M_FILTER.FWD
+SP_LOG=/var/tmp/M_FILTER.FWD
 
 #
 # Directory of the 7plus files (parts)
 #
-SP_DIR=/usr/local/fbbs/7m
+SP_DIR=/bcm/pub
 
 #
 # Directory for the decoded files
 #
 SP_RES=$SP_DIR/ok
 
+#
+# Delay for the part files to be deleted (2 months)
+#
+PART_DELAY=62
 
+#
+# Should the decoded files be deleted (YES/NO)
+# Warning, 'YES' will destroy the decoded files !!
+#
+FILE_CLEAN=YES
 
+#
+# Delay for the decoded files to be deleted (1 month)
+#
+FILE_DELAY=31
 
+#
+# Don't change anymore line
+#
 
+MAIL_TMP=/tmp/7pltmp.$$
+FBBVERSION="2.00"
+
+report()
+{
+	for ADM in $SP_ADM ; do
+#		echo "#"
+		echo "SP $ADM < 7PLSRV"
+		echo "7pFBB report"
+	    echo
+	    echo "7pfbb v$FBBVERSION (f6fbb - 2000)"
+	    echo
+		cat $1
+		echo "/EX"
+	done
+}
+
+not_found()
+{
+	echo "Could not find 7plus program..."
+	echo "7pfbb need it to work !"
+	echo
+	echo "Check that :"
+	echo "  - the 7plus package is installed"
+	echo "  - the SPLUS variable in 7pfbb script is correctly set"
+	echo "  - the 7plus program is executable"
+}
+
+if [ ! -x $SPLUS ] ; then
+	not_found > $MAIL_TMP
+	report $MAIL_TMP >> $MAIL_IN
+	exit 0
+fi
 
 if [ ! -f $SP_LOG ]
 then
-
-  echo "No log file. exiting..."
-  exit 0
-
+	echo "No log file. exiting..."
+	exit 0
 fi
 
 if [ ! -d $SP_DIR ]
 then
-  echo "Creating $SP_DIR"
-  mkdir $SP_DIR
-  if [ $? != 0 ]
-  then
-    echo "Could not create $SP_DIR. Aborting..."
-    exit 1
-  fi
+	echo "Creating $SP_DIR"
+	mkdir -p $SP_DIR
+	if [ $? != 0 ]
+	then
+		echo "Could not create $SP_DIR. Aborting..."
+		exit 1
+	fi
 fi
 
 if [ ! -d $SP_RES ]
 then
-  echo "Creating $SP_RES"
-  mkdir $SP_RES
-  if [ $? != 0 ]
-  then
-    echo "Could not create $SP_RES. Aborting..."
-    exit 2
-  fi
+	echo "Creating $SP_RES"
+	mkdir -p $SP_RES
+	if [ $? != 0 ]
+	then
+		echo "Could not create $SP_RES. Aborting..."
+		exit 2
+	fi
 fi
 
 # Move the log file to the 7P directory
@@ -101,40 +150,53 @@ cd $SP_RES
 
 for file in $SP_DIR/*.p01
 do
-  name=`basename $file .p01`
-  echo -n "Trying to decode $SP_DIR/$name ... "
-  $SPLUS $SP_DIR/$name > 7pfbb_tmp
-  if [ $? = 0 ]
-  then
-    #echo "SP $SP_ADM"      >> $MAIL_IN
-    #echo "7pFBB report"    >> $MAIL_IN
-    grep success 7pfbb_tmp >> $MAIL_IN
-    #echo "/EX"             >> $MAIL_IN
-    rm $SP_DIR/$name.p*
-    echo "Ok"
-  else
-    echo "No"
-  fi
-  rm 7pfbb_tmp
+	name=`basename $file .p01`
+	echo -n "Trying to decode $SP_DIR/$name ... "
+	$SPLUS $SP_DIR/$name > 7pfbb_tmp
+	if [ $? = 0 ]
+	then
+		grep success 7pfbb_tmp >> $MAIL_TMP
+		rm $SP_DIR/$name.p*
+		echo "Ok"
+	else
+		echo "No"
+	fi
+	rm 7pfbb_tmp
 done
 
 for file in $SP_DIR/*.7pl
 do
-  name=`basename $file .7pl`
-  echo -n "Trying to decode $SP_DIR/$name ... "
-  $SPLUS $SP_DIR/$name > 7pfbb_tmp
-  if [ $? = 0 ]
-  then
-    #echo "SP $SP_ADM"      >> $MAIL_IN
-    #echo "7pFBB report"    >> $MAIL_IN
-    grep success 7pfbb_tmp >> $MAIL_IN
-    #echo "/EX"             >> $MAIL_IN
-    rm $SP_DIR/$name.7pl
-    echo "Ok"
-  else
-    echo "No"
-  fi
-  rm 7pfbb_tmp
+	name=`basename $file .7pl`
+	echo -n "Trying to decode $SP_DIR/$name ... "
+	$SPLUS $SP_DIR/$name > 7pfbb_tmp
+	if [ $? = 0 ]
+	then
+		grep success 7pfbb_tmp >> $MAIL_TMP
+		rm $SP_DIR/$name.7pl
+		echo "Ok"
+	else
+		echo "No"
+	fi
+	rm 7pfbb_tmp
 done
+
+echo >> $MAIL_TMP
+
+nbdel=`find $SP_DIR -maxdepth 1 -type f -mtime +$PART_DELAY -exec rm -f {} \; -print | wc -l`
+if [ $nbdel -gt 0 ] ; then
+	echo "$nbdel 7plus parts deleted   (older than $PART_DELAY days)" >> $MAIL_TMP
+fi                                                                                         
+
+if [ $FILE_CLEAN = YES ] ; then
+	nbdel=`find $SP_RES -maxdepth 1 -type f -mtime +$FILE_DELAY -exec rm -f {} \; -print | wc -l`
+	if [ $nbdel -gt 0 ] ; then
+		echo "$nbdel decoded files deleted (older than $FILE_DELAY days)" >> $MAIL_TMP
+	fi                                                                                         
+fi
+
+if [ -f $MAIL_TMP ] ; then
+	report $MAIL_TMP >> $MAIL_IN
+	rm $MAIL_TMP
+fi
 
 exit 0
