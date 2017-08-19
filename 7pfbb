@@ -1,0 +1,140 @@
+#!/bin/sh
+
+##############################################
+#
+# 7PLUS auto-extracter and manager for LINUX
+#
+# F6FBB - 1996
+# Rewritten for BCM by OK2BXT 1998
+#
+##############################################
+
+
+#
+# ALL THESE VARIABLES MUST BE INITALIZED !
+#
+
+#
+# 7PLUS administrator for report mails
+#
+SP_ADM=OK2BXT
+
+#
+# MAIL.IN file
+#
+#MAIL_IN=/usr/local/fbbs/mail.in
+MAIL_IN=/var/log/bcm2fs.log
+
+#
+# Name (and path) of the 7plus program
+#
+SPLUS=/usr/local/fbbs/bin/7plus
+
+#
+# Name of the log file
+#
+SP_LOG=/tmp/pok/M_FILTER.FWD
+
+#
+# Directory of the 7plus files (parts)
+#
+SP_DIR=/usr/local/fbbs/7m
+
+#
+# Directory for the decoded files
+#
+SP_RES=$SP_DIR/ok
+
+
+
+
+
+
+if [ ! -f $SP_LOG ]
+then
+
+  echo "No log file. exiting..."
+  exit 0
+
+fi
+
+if [ ! -d $SP_DIR ]
+then
+  echo "Creating $SP_DIR"
+  mkdir $SP_DIR
+  if [ $? != 0 ]
+  then
+    echo "Could not create $SP_DIR. Aborting..."
+    exit 1
+  fi
+fi
+
+if [ ! -d $SP_RES ]
+then
+  echo "Creating $SP_RES"
+  mkdir $SP_RES
+  if [ $? != 0 ]
+  then
+    echo "Could not create $SP_RES. Aborting..."
+    exit 2
+  fi
+fi
+
+# Move the log file to the 7P directory
+#
+mv $SP_LOG $SP_DIR/7pl_log
+
+# Go to the 7P directory
+#
+cd $SP_DIR
+
+#
+# Extract 7plus files from the log file and put them in the result directory
+#
+
+$SPLUS 7pl_log -y -x > /dev/null
+
+#
+# Go to the result directory to decode files
+#
+cd $SP_RES
+
+for file in $SP_DIR/*.p01
+do
+  name=`basename $file .p01`
+  echo -n "Trying to decode $SP_DIR/$name ... "
+  $SPLUS $SP_DIR/$name > 7pfbb_tmp
+  if [ $? = 0 ]
+  then
+    #echo "SP $SP_ADM"      >> $MAIL_IN
+    #echo "7pFBB report"    >> $MAIL_IN
+    grep success 7pfbb_tmp >> $MAIL_IN
+    #echo "/EX"             >> $MAIL_IN
+    rm $SP_DIR/$name.p*
+    echo "Ok"
+  else
+    echo "No"
+  fi
+  rm 7pfbb_tmp
+done
+
+for file in $SP_DIR/*.7pl
+do
+  name=`basename $file .7pl`
+  echo -n "Trying to decode $SP_DIR/$name ... "
+  $SPLUS $SP_DIR/$name > 7pfbb_tmp
+  if [ $? = 0 ]
+  then
+    #echo "SP $SP_ADM"      >> $MAIL_IN
+    #echo "7pFBB report"    >> $MAIL_IN
+    grep success 7pfbb_tmp >> $MAIL_IN
+    #echo "/EX"             >> $MAIL_IN
+    rm $SP_DIR/$name.7pl
+    echo "Ok"
+  else
+    echo "No"
+  fi
+  rm 7pfbb_tmp
+done
+
+exit 0
