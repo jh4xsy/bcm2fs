@@ -1,0 +1,93 @@
+#!/usr/bin/perl
+
+#
+#  Written by ok2bxt 1998
+#
+
+$tmp = "/var/tmp/lastone";              #temporary variable last file from bcm
+$tofile = "/tmp/pok/M_FILTER.FWD";      #where to export (input path 4 7pfbb)
+$bcm_info = "/usr/local/bcm/info";      #where are bcm's info files 
+$bul = "/usr/local/bcm/bulletin.bcm";   #where is bulletin.bcm
+$chk = "/usr/local/bcm/check.bcm";      #where is check.bcm
+
+%pismenka = ("0",0,"1",1,"2",2,"3",3,"4",4,"5",5,"6",6,"7",7,"8",8,"9",9,
+             "a",10,"b",11,"c",12,"d",13,"e",14,"f",15,"g",16,"h",17,"i",18,
+             "j",19,"k",20,"l",21,"m",22,"n",23,"o",24,"p",25,"q",26,"r",27,
+             "s",28,"t",29,"u",30,"v",31,"w",32,"x",33,"y",34,"z",35);
+
+
+sub porovnej {
+	$ok =0;
+        my($a1,$a2) = @_;
+        @p1 = split//,$a1;
+        @p2 = split//,$a2;
+        foreach ($i=0;$i ne 7;$i++) {
+                if ($ok eq 0) {
+                        SWITCH: {
+                                if ($pismenka{$p1[$i]} > $pismenka{$p2[$i]}){
+                                        $ok = 1;
+					last SWITCH;
+                                }
+                                if ($pismenka{$p1[$i]} < $pismenka{$p2[$i]}){
+                                        $ok = -1;
+					last SWITCH;
+                                }
+                        }
+                }
+        }
+        return($ok);
+}
+
+sub prikopiruj {
+	my($co,$kam) = @_;
+	open(soubor1,"<$co") or die "Could not open $co for read!";
+	open(soubor2,">>$kam") or die "Could not open $kam for add!";
+	while( $line = <soubor1>) {
+		print soubor2 $line;
+	}
+	close(soubor1);
+	close(soubor2);
+}
+
+
+
+
+open(fajl,"$bul") or die "Could not open bulletin.bcm!\n";
+while ($line = <fajl>) {
+	if ($line =~ /^ /) { 
+		@podr = split(" ",$line);	
+		$bulletin{$podr[0]} = "/" .$rubr[0] ."/" .$podr[0];
+	}
+	elsif (!($line =~ /^;/)) {
+		@rubr = split(" ",$line);
+		$bulletin{$rubr[0]} = "/" .$rubr[0];
+	}		
+}
+close(fajl);
+
+open(fajl,"<$tmp") or $lastone = "0000000";
+	$lastone = <fajl>;
+close(fajl);
+
+open(fajl,"$chk") or die "Could not open check.bcm!\n";
+while ($line = <fajl>) {
+        if (substr($line,65,1) eq "7") {
+                $soubor = substr($line,0,7);
+		$soubor =~ tr/A-Z/a-z/;
+                $for_mbx = substr($line,15,8);
+                $for_mbx =~ s/ +//;
+		$for_mbx =~ tr/A-Z/a-z/;
+                #print $soubor," ",$bulletin{$for_mbx},"\n";
+		if ((exists $bulletin{$for_mbx}) and (porovnej($soubor,$lastone)==1)) {
+			#print $bulletin{$for_mbx}."/".$soubor,"\n";
+			#exec "cat /usr/local/bcm/info$bulletin{$for_mbx}/$soubor";
+			prikopiruj("$bcm_info$bulletin{$for_mbx}/$soubor",$tofile);
+		}
+        }
+}
+close(fajl);
+
+open(fajl,">$tmp") or die "Could not write to $tmp!\n";
+	print fajl $soubor;
+close(fajl);
+ 
