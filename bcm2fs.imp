@@ -1,0 +1,4 @@
+o ./bcm2fs
+sleep 10
+o ./7pfbb
+sleep 10
