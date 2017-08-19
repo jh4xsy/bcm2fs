@@ -1,0 +1,27 @@
+instalation :
+
+1. copy to BCM directory these files :
+      - bcm2fs
+      - bcm2fs.imp
+      - 7pfbb
+
+2. add to crontab.bcm similiar line :
+      44   * * * * bcm2fs
+      
+3. edit variables ( patches ) in bcm2fs and 7pfbb everything begining with
+   # is remark and is ignored..
+
+
+running of automatic routine bcm2fs.imp (my conf) :
+
+1. start bcm2fs
+   scan from last position (stored in /var/tmp/lastone) in check.bcm and take
+   outside all 7+ (/tmp/pok/M_FILTER)
+
+2. start 7pfbb
+   take out all 7+ files (into /usr/local/fbbs/7m) and then try decode all
+   files *.p01 *.7pl. if decoding was successful is logged (/var/log/bcm2fs.log)
+  
+
+i think that's all.  enjoy. all critics to my head ok2bxt@ok0pbx :-))
+
